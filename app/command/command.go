@@ -3,25 +3,30 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/dotslash21/redis-clone/app/store"
 )
 
+var redis_store = store.GetStore()
+
 // Handle a command according to the RESP protocol
-func HandleCommand(command string) string {
-	command, args, err := parseCommand(command)
+func HandleCommand(cmdStr string) string {
+	cmd, args, err := parseCommand(cmdStr)
 	if err != nil {
 		return formatError(fmt.Sprintf("ERR %v", err))
 	}
 
-	switch strings.ToUpper(command) {
+	switch strings.ToUpper(cmd) {
 	case "PING":
-		return formatSimpleString("PONG")
+		return handlePing()
 	case "ECHO":
-		if len(args) == 0 {
-			return formatError("ERR wrong number of arguments for 'ECHO' command")
-		}
-		return formatSimpleString(args[0])
+		return handleEcho(args)
+	case "SET":
+		return handleSet(args)
+	case "GET":
+		return handleGet(args)
 	default:
-		return formatError(fmt.Sprintf("ERR unknown command '%s'", command))
+		return formatError(fmt.Sprintf("ERR unknown command '%s'", cmd))
 	}
 }
 

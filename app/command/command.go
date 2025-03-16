@@ -10,12 +10,7 @@ import (
 var redis_store = store.GetStore()
 
 // Handle a command according to the RESP protocol
-func HandleCommand(cmdStr string) string {
-	cmd, args, err := parseCommand(cmdStr)
-	if err != nil {
-		return formatError(fmt.Sprintf("ERR %v", err))
-	}
-
+func HandleCommand(cmd string, args []string) string {
 	switch strings.ToUpper(cmd) {
 	case "PING":
 		return handlePing()
@@ -28,16 +23,6 @@ func HandleCommand(cmdStr string) string {
 	default:
 		return formatError(fmt.Sprintf("ERR unknown command '%s'", cmd))
 	}
-}
-
-// Parse a command according to the RESP protocol
-func parseCommand(command string) (string, []string, error) {
-	parts := strings.Fields(command)
-	if len(parts) == 0 {
-		return "", nil, fmt.Errorf("invalid command")
-	}
-
-	return parts[0], parts[1:], nil
 }
 
 // Format a simple string according to RESP protocol

@@ -14,7 +14,7 @@ func handleEcho(args []string) string {
 	if len(args) == 0 {
 		return formatError("ERR wrong number of arguments for 'ECHO' command")
 	}
-	return formatSimpleString(args[0])
+	return formatBulkString(args[0], false)
 }
 
 func handleSet(args []string) string {

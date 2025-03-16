@@ -112,7 +112,7 @@ func (s *Store) Get(key string) (value string, err error) {
 
 	if s.isExpired(key) {
 		delete(s.data, key)
-		return "", errors.New("key not found")
+		return "", errors.New("key expired")
 	}
 
 	val, exists := s.data[key]

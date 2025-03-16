@@ -2,7 +2,6 @@ package command
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 )
@@ -63,7 +62,7 @@ func handleGet(args []string) string {
 	}
 	value, err := redis_store.Get(args[0])
 	if err != nil {
-		return formatError(fmt.Sprintf("ERR %v", err))
+		return formatBulkString("", true)
 	}
-	return formatSimpleString(value)
+	return formatBulkString(value, false)
 }

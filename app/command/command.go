@@ -49,3 +49,11 @@ func formatSimpleString(str string) string {
 func formatError(err string) string {
 	return fmt.Sprintf("%c%s\r\n", ERROR_PREFIX, err)
 }
+
+// Format a bulk string according to RESP protocol
+func formatBulkString(str string, isNull bool) string {
+	if isNull {
+		return fmt.Sprintf("%c-1\r\n", BULK_STRING_PREFIX)
+	}
+	return fmt.Sprintf("%c%d\r\n%s\r\n", BULK_STRING_PREFIX, len(str), str)
+}

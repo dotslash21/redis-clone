@@ -72,7 +72,7 @@ OK
 
 - `app/main.go`: Entry point of the application
 - `app/server/server.go`: TCP server implementation with Redis protocol handling
-- `app/commands/commands.go`: Implementation of supported Redis commands
+- `app/command/command.go`: Implementation of supported Redis commands
 - `app/store/store.go`: In-memory key-value store with TTL support
 
 ## Implementation Details

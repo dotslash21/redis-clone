@@ -7,27 +7,18 @@ import (
 	"log"
 	"net"
 	"strings"
-)
 
-const (
-	port              = 6379
-	requestBufferSize = 1024
-)
-
-// Redis RESP protocol constants
-const (
-	simpleStringPrefix = '+'
-	errorPrefix        = '-'
+	"github.com/dotslash21/redis-clone/app/command"
 )
 
 // Run the server and listen for incoming connections
 func Run() {
 	// Start a TCP server which listens on port 6379
-	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", port))
+	listener, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", PORT))
 	if err != nil {
-		log.Fatalf("Failed to bind to port %d: %v", port, err)
+		log.Fatalf("Failed to bind to port %d: %v", PORT, err)
 	}
-	log.Printf("Listening on port %d for incoming connections", port)
+	log.Printf("Listening on port %d for incoming connections", PORT)
 
 	for {
 		// Accept a connection
@@ -65,7 +56,7 @@ func handleConnection(conn net.Conn) {
 		log.Printf("Received data: %s", request)
 
 		// Handle the request
-		response := handleCommand(request)
+		response := command.HandleCommand(request)
 		if response != "" {
 			_, err := conn.Write([]byte(response))
 			if err != nil {
@@ -76,24 +67,4 @@ func handleConnection(conn net.Conn) {
 			log.Printf("Sent response: %s", response)
 		}
 	}
-}
-
-// Handle a command according to the RESP protocol
-func handleCommand(command string) string {
-	switch strings.ToUpper(command) {
-	case "PING":
-		return formatSimpleString("PONG")
-	default:
-		return formatError(fmt.Sprintf("ERR unknown command '%s'", command))
-	}
-}
-
-// Format a simple string according to RESP protocol
-func formatSimpleString(str string) string {
-	return fmt.Sprintf("%c%s\r\n", simpleStringPrefix, str)
-}
-
-// Format an error according to RESP protocol
-func formatError(err string) string {
-	return fmt.Sprintf("%c%s\r\n", errorPrefix, err)
 }

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"sync"
 	"time"
+
+	"github.com/dotslash21/redis-clone/app/types"
 )
 
 // RedisValue holds both the value and metadata (type info, expiry).
@@ -20,28 +22,29 @@ type expiryItem struct {
 }
 
 // expiryHeap is a min-heap based on expiry time.
-type expiryHeap []expiryItem
+type expiryHeap struct {
+	items []expiryItem
+	mu    sync.RWMutex
+}
 
-func (eh expiryHeap) Len() int           { return len(eh) }
-func (eh expiryHeap) Less(i, j int) bool { return eh[i].expireAt.Before(eh[j].expireAt) }
-func (eh expiryHeap) Swap(i, j int)      { eh[i], eh[j] = eh[j], eh[i] }
-
+func (eh *expiryHeap) Len() int           { return len(eh.items) }
+func (eh *expiryHeap) Less(i, j int) bool { return eh.items[i].expireAt.Before(eh.items[j].expireAt) }
+func (eh *expiryHeap) Swap(i, j int)      { eh.items[i], eh.items[j] = eh.items[j], eh.items[i] }
 func (eh *expiryHeap) Push(x interface{}) {
-	*eh = append(*eh, x.(expiryItem))
+	eh.items = append(eh.items, x.(expiryItem))
 }
 
 func (eh *expiryHeap) Pop() interface{} {
-	old := *eh
+	old := eh.items
 	n := len(old)
 	item := old[n-1]
-	*eh = old[0 : n-1]
+	eh.items = old[0 : n-1]
 	return item
 }
 
 // Store is a Redis-like key-value store with a min-heap for expiry.
 type Store struct {
-	data map[string]*RedisValue
-	mu   sync.RWMutex
+	data *types.ThreadSafeMap[string, *RedisValue]
 	exp  expiryHeap
 }
 
@@ -52,9 +55,8 @@ var store *Store
 func GetStore() *Store {
 	if store == nil {
 		store = &Store{
-			data: make(map[string]*RedisValue),
-			mu:   sync.RWMutex{},
-			exp:  expiryHeap{},
+			data: types.NewThreadSafeMap[string, *RedisValue](),
+			exp:  expiryHeap{items: []expiryItem{}},
 		}
 		heap.Init(&store.exp)
 	}
@@ -63,26 +65,26 @@ func GetStore() *Store {
 
 // flushExpired deletes all expired keys at once.
 func (s *Store) FlushExpired() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.exp.mu.Lock()
+	defer s.exp.mu.Unlock()
 
 	now := time.Now()
-	for len(s.exp) > 0 && !s.exp[0].expireAt.IsZero() && s.exp[0].expireAt.Before(now) {
+	for len(s.exp.items) > 0 && !s.exp.items[0].expireAt.IsZero() && s.exp.items[0].expireAt.Before(now) {
 		top := heap.Pop(&s.exp).(expiryItem)
-		if v, ok := s.data[top.key]; ok && !v.ExpireAt.IsZero() && v.ExpireAt.Before(now) {
-			delete(s.data, top.key)
+		if v, ok := s.data.Get(top.key); ok && !v.ExpireAt.IsZero() && v.ExpireAt.Before(now) {
+			s.data.Delete(top.key)
 		}
 	}
 }
 
 // isExpired returns true if the key has expired and removes it from the store.
 func (s *Store) isExpired(key string) bool {
-	val, exists := s.data[key]
+	val, exists := s.data.Get(key)
 	if !exists {
 		return true
 	}
 	if !val.ExpireAt.IsZero() && time.Now().After(val.ExpireAt) {
-		delete(s.data, key)
+		s.data.Delete(key)
 		return true
 	}
 	return false
@@ -90,32 +92,29 @@ func (s *Store) isExpired(key string) bool {
 
 // Set stores a string value with optional expiry in the store.
 func (s *Store) Set(key, value string, ttl time.Duration) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	expiry := time.Time{}
 	if ttl > 0 {
 		expiry = time.Now().Add(ttl)
+
+		s.exp.mu.Lock()
 		heap.Push(&s.exp, expiryItem{key: key, expireAt: expiry})
+		s.exp.mu.Unlock()
 	}
 
-	s.data[key] = &RedisValue{
+	s.data.Set(key, &RedisValue{
 		Value:    value,
 		ExpireAt: expiry,
-	}
+	})
 }
 
 // Get retrieves a string value from the store, returning ok = false if missing or expired.
 func (s *Store) Get(key string) (value string, err error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	if s.isExpired(key) {
-		delete(s.data, key)
+		s.data.Delete(key)
 		return "", errors.New("key expired")
 	}
 
-	val, exists := s.data[key]
+	val, exists := s.data.Get(key)
 	if !exists || s.isExpired(key) {
 		return "", errors.New("key not found")
 	}

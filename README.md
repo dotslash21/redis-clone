@@ -14,6 +14,7 @@ Currently implemented:
   - ECHO - Returns the message
   - SET - Sets a key to a value with optional expiry (via EX and PX)
   - GET - Gets the value of a key
+  - CONFIG - Get or set server configuration parameters
 
 ## Getting Started
 
@@ -85,6 +86,23 @@ Gets the value of a key
 ```
 127.0.0.1:6379> GET mykey
 "myvalue"
+```
+
+#### CONFIG
+Get or set server configuration parameters
+```
+# Get configuration by pattern
+127.0.0.1:6379> CONFIG GET *
+(empty list or set)
+
+# Set configuration parameter
+127.0.0.1:6379> CONFIG SET maxmemory "1gb"
+OK
+
+# Get specific configuration
+127.0.0.1:6379> CONFIG GET maxmemory
+"maxmemory"
+"1gb"
 ```
 
 ## Project Structure

@@ -121,9 +121,60 @@ func (c *RedisClient) readResponse() (string, error) {
 		return string(data[:length]), nil
 
 	case '*': // Array
-		// For simplicity, we're not fully implementing array parsing
-		// as it's not needed for the basic commands we're testing
-		return "", fmt.Errorf("array responses not supported in this simple client")
+		// Parse the array length
+		length, err := strconv.Atoi(line[1:])
+		if err != nil {
+			return "", fmt.Errorf("invalid array length: %w", err)
+		}
+
+		// If it's an empty array, return a specific format
+		if length == 0 {
+			return "*0\r\n", nil
+		}
+
+		// For arrays, we'll read all elements and return the raw RESP format
+		// This will be easier to deal with in tests
+		result := line + "\r\n"
+
+		// Read each array element
+		for i := 0; i < length; i++ {
+			// Read element type
+			elemType, err := c.reader.ReadByte()
+			if err != nil {
+				return "", fmt.Errorf("failed to read array element type: %w", err)
+			}
+
+			c.reader.UnreadByte()
+
+			// Read the full element line
+			elementLine, err := c.reader.ReadString('\n')
+			if err != nil {
+				return "", fmt.Errorf("failed to read array element line: %w", err)
+			}
+
+			result += elementLine
+
+			// If it's a bulk string, read the data too
+			if elemType == '$' {
+				bulkLength, err := strconv.Atoi(strings.TrimRight(elementLine, "\r\n")[1:])
+				if err != nil {
+					return "", fmt.Errorf("invalid bulk string length in array: %w", err)
+				}
+
+				if bulkLength > -1 {
+					// Read the string content including CRLF
+					bulkData := make([]byte, bulkLength+2)
+					_, err = c.reader.Read(bulkData)
+					if err != nil {
+						return "", fmt.Errorf("failed to read bulk string data in array: %w", err)
+					}
+
+					result += string(bulkData)
+				}
+			}
+		}
+
+		return result, nil
 
 	default:
 		return "", fmt.Errorf("unknown response type: %c", respType)

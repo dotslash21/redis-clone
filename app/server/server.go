@@ -56,6 +56,7 @@ func (s *Server) registerCommands() {
 	s.registry.Register(command.NewEchoCommand())
 	s.registry.Register(command.NewSetCommand(s.store))
 	s.registry.Register(command.NewGetCommand(s.store))
+	s.registry.Register(command.NewConfigCommand())
 }
 
 // Run starts the server and listens for connections

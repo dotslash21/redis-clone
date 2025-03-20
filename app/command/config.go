@@ -22,16 +22,17 @@ func (c *ConfigCommand) Name() string {
 
 // Execute handles the CONFIG command
 func (c *ConfigCommand) Execute(args []string) (string, error) {
-	if len(args) < 2 {
+	if len(args) < 1 {
 		return "", errors.New(errors.ErrorTypeCommand, "wrong number of arguments for 'config' command")
 	}
 
-	if args[1] == "GET" {
-		if len(args) != 3 {
+	subcommand := args[0]
+	if subcommand == "GET" {
+		if len(args) != 2 {
 			return "", errors.New(errors.ErrorTypeCommand, "wrong number of arguments for 'config get' command")
 		}
 
-		searchpattern := args[2]
+		searchpattern := args[1]
 		results, err := config.GetConfig(searchpattern)
 		if err != nil {
 			return "", errors.New(errors.ErrorTypeCommand, "error getting config: "+err.Error())
@@ -48,18 +49,18 @@ func (c *ConfigCommand) Execute(args []string) (string, error) {
 		}
 
 		return resp.FormatArray(respArray), nil
-	} else if args[1] == "SET" {
-		if len(args) != 4 {
+	} else if subcommand == "SET" {
+		if len(args) != 3 {
 			return "", errors.New(errors.ErrorTypeCommand, "wrong number of arguments for 'config set' command")
 		}
 
-		key := args[2]
-		value := args[3]
+		key := args[1]
+		value := args[2]
 
 		config.SetConfig(key, value)
 
 		return resp.FormatSimpleString("OK"), nil
 	} else {
-		return "", errors.New(errors.ErrorTypeCommand, "unknown subcommand 'config "+args[1]+"'")
+		return "", errors.New(errors.ErrorTypeCommand, "unknown subcommand 'config "+subcommand+"'")
 	}
 }

@@ -50,14 +50,16 @@ func (c *ConfigCommand) Execute(args []string) (string, error) {
 
 		return resp.FormatArray(respArray), nil
 	} else if subcommand == "SET" {
-		if len(args) != 3 {
+		if (len(args)-1)%2 != 0 {
 			return "", errors.New(errors.ErrorTypeCommand, "wrong number of arguments for 'config set' command")
 		}
 
-		key := args[1]
-		value := args[2]
+		for i := 1; i < len(args); i += 2 {
+			key := args[i]
+			value := args[i+1]
 
-		config.SetConfig(key, value)
+			config.SetConfig(key, value)
+		}
 
 		return resp.FormatSimpleString("OK"), nil
 	} else {

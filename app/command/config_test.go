@@ -59,8 +59,8 @@ func TestConfigCommand_Execute(t *testing.T) {
 			errMsg:   "wrong number of arguments for 'config set' command",
 		},
 		{
-			name:     "set with too many arguments",
-			args:     []string{"SET", "test-key", "new-value", "extra"},
+			name:     "set with odd number of arguments",
+			args:     []string{"SET", "key1", "value1", "key2"},
 			expected: "",
 			errMsg:   "wrong number of arguments for 'config set' command",
 		},
@@ -91,6 +91,12 @@ func TestConfigCommand_Execute(t *testing.T) {
 		{
 			name:     "set existing key",
 			args:     []string{"SET", "test-key", "updated-value"},
+			expected: "+OK\r\n",
+			errMsg:   "",
+		},
+		{
+			name:     "set multiple keys",
+			args:     []string{"SET", "multi-key1", "multi-value1", "multi-key2", "multi-value2"},
 			expected: "+OK\r\n",
 			errMsg:   "",
 		},
@@ -136,6 +142,15 @@ func TestConfigCommand_Execute(t *testing.T) {
 				result, _ := config.GetConfig("test-key")
 				if _, exists := result["test-key"]; !exists || result["test-key"] != "updated-value" {
 					t.Errorf("Failed to update existing key: %v", result)
+				}
+			} else if tt.name == "set multiple keys" {
+				// Verify multiple keys were set correctly
+				result, _ := config.GetConfig("multi-key*")
+				if _, exists := result["multi-key1"]; !exists || result["multi-key1"] != "multi-value1" {
+					t.Errorf("Failed to set multi-key1: %v", result)
+				}
+				if _, exists := result["multi-key2"]; !exists || result["multi-key2"] != "multi-value2" {
+					t.Errorf("Failed to set multi-key2: %v", result)
 				}
 			}
 		})

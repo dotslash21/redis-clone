@@ -95,8 +95,12 @@ Get or set server configuration parameters
 127.0.0.1:6379> CONFIG GET *
 (empty list or set)
 
-# Set configuration parameter
+# Set single configuration parameter
 127.0.0.1:6379> CONFIG SET maxmemory "1gb"
+OK
+
+# Set multiple configuration parameters at once
+127.0.0.1:6379> CONFIG SET maxmemory "1gb" timeout "60"
 OK
 
 # Get specific configuration

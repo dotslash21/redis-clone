@@ -67,6 +67,40 @@ func TestConfigCommands(t *testing.T) {
 		if !strings.Contains(emptyResponse, "*0") {
 			t.Errorf("Expected empty array response for non-existent key, got %q", emptyResponse)
 		}
+
+		// Test setting multiple key-value pairs with a single CONFIG SET command
+		multi1Key := "multi-config-key1"
+		multi1Value := "multi-config-value1"
+		multi2Key := "multi-config-key2"
+		multi2Value := "multi-config-value2"
+
+		multiSetResponse, err := ts.Client.Execute("CONFIG", "SET",
+			multi1Key, multi1Value,
+			multi2Key, multi2Value)
+
+		if err != nil {
+			t.Fatalf("Failed to execute CONFIG SET command with multiple key-value pairs: %v", err)
+		}
+		if multiSetResponse != "OK" {
+			t.Errorf("Expected 'OK' for multi-key CONFIG SET, got %q", multiSetResponse)
+		}
+
+		// Verify both keys were set correctly
+		multi1GetResponse, err := ts.Client.Execute("CONFIG", "GET", multi1Key)
+		if err != nil {
+			t.Fatalf("Failed to execute CONFIG GET for first multi key: %v", err)
+		}
+		if !strings.Contains(multi1GetResponse, multi1Key) || !strings.Contains(multi1GetResponse, multi1Value) {
+			t.Errorf("Expected response to contain key %q and value %q, got %q", multi1Key, multi1Value, multi1GetResponse)
+		}
+
+		multi2GetResponse, err := ts.Client.Execute("CONFIG", "GET", multi2Key)
+		if err != nil {
+			t.Fatalf("Failed to execute CONFIG GET for second multi key: %v", err)
+		}
+		if !strings.Contains(multi2GetResponse, multi2Key) || !strings.Contains(multi2GetResponse, multi2Value) {
+			t.Errorf("Expected response to contain key %q and value %q, got %q", multi2Key, multi2Value, multi2GetResponse)
+		}
 	})
 
 	// Test CONFIG SET and CONFIG GET commands with inline format
@@ -104,6 +138,33 @@ func TestConfigCommands(t *testing.T) {
 		if !strings.Contains(emptyResponse, "*0") {
 			t.Errorf("Expected empty array response for non-existent key, got %q", emptyResponse)
 		}
+
+		// Test setting multiple key-value pairs with inline format
+		multiKey1 := "inline-multi-key1"
+		multiValue1 := "inline-multi-value1"
+		multiKey2 := "inline-multi-key2"
+		multiValue2 := "inline-multi-value2"
+
+		multiSetResponse, err := ts.Client.ExecuteInline("CONFIG SET",
+			multiKey1, multiValue1,
+			multiKey2, multiValue2)
+
+		if err != nil {
+			t.Fatalf("Failed to execute CONFIG SET command with multiple key-value pairs in inline format: %v", err)
+		}
+		if multiSetResponse != "OK" {
+			t.Errorf("Expected 'OK' for multi-key CONFIG SET with inline format, got %q", multiSetResponse)
+		}
+
+		// Verify both keys were set correctly
+		multiGetResponse, err := ts.Client.ExecuteInline("CONFIG GET", "inline-multi-*")
+		if err != nil {
+			t.Fatalf("Failed to execute CONFIG GET for multi keys: %v", err)
+		}
+		if !strings.Contains(multiGetResponse, multiKey1) || !strings.Contains(multiGetResponse, multiValue1) ||
+			!strings.Contains(multiGetResponse, multiKey2) || !strings.Contains(multiGetResponse, multiValue2) {
+			t.Errorf("Expected response to contain both keys and values, got %q", multiGetResponse)
+		}
 	})
 
 	// Test invalid CONFIG commands
@@ -136,6 +197,14 @@ func TestConfigCommands(t *testing.T) {
 		invalidResp, err = ts.Client.Execute("CONFIG", "SET", "some-key")
 		if err == nil {
 			t.Errorf("Expected error for CONFIG SET with missing value, got: %q", invalidResp)
+		} else if !strings.Contains(err.Error(), "ERR") {
+			t.Errorf("Expected error to contain 'ERR', got: %v", err)
+		}
+
+		// Test CONFIG SET with odd number of arguments (missing a value)
+		invalidResp, err = ts.Client.Execute("CONFIG", "SET", "key1", "value1", "key2")
+		if err == nil {
+			t.Errorf("Expected error for CONFIG SET with odd number of arguments, got: %q", invalidResp)
 		} else if !strings.Contains(err.Error(), "ERR") {
 			t.Errorf("Expected error to contain 'ERR', got: %v", err)
 		}
